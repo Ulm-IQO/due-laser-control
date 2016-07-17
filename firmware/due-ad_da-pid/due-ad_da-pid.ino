@@ -166,6 +166,8 @@ uint8_t speedIndex = 0;
 
 uint8_t adcdivcount = 0;
 
+void stepMe(void);
+
 void PIDstep(piddata_t* p, int32_t pv){
   int32_t delta = p->setpoint - pv;
   p->integrated += delta;
