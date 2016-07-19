@@ -12,115 +12,19 @@
 #include <stdint.h>
 
 #include "libraries/DueTimer/DueTimer.h"
-#include "libraries/ArduinoSCPIParser/scpiparser.h"
-
-#include "libraries/AD7176/AD7176_regs.h"
-#include "libraries/AD7176/AD7176_Comm.h"
-#include "libraries/AD7176/AD7176.h"
 
 #include "libraries/AD57XX/AD57XX_Comm.h"
 #include "libraries/AD57XX/AD57XX.h"
 
-// data for pid calculation
-typedef struct _pid_data {
-  // control value
-  int32_t cv;
-  // integration variable for I term
-  int32_t integrated;
-  // last difference between setpoint and process value for D term
-  int32_t previousdelta;
-  // setpoint for PID
-  int32_t setpoint;
-  // length of time interval between pid steps
-  int32_t timestep;
-  // limits for control value
-  int32_t limits[2];
-  // constants for P, I and D terms
-  float kP, kI, kD;
-} piddata_t;
+#include "boardsetup.h"
+#include "adc_setup.h"
+#include "scpi.h"
+#include "pid.h"
 
 // scan speed pid
 piddata_t velpid = {0, 0, 0, 5000, 1000, {-1000, 1000}, 0.001, 0, 0 };
 // position pid
 piddata_t pospid = {0, 0, 0, 2000000, 1000, {-520000, 520000}, 0.01, 0.00001, 0 };
-
-
-st_reg init_state[] = 
-{
-    {0x00, 0x00l,   1, "Stat_Reg "}, //Status_Register
-    {0x01, 0x8000l, 2, "ADCModReg"}, //ADC_Mode_Register
-    {0x02, 0x0800l, 2, "IfModeReg"}, //Interface_Mode_Register
-    {0x03, 0x0000l, 3, "Reg_Check"}, //Register_Check
-    {0x04, 0x0000l, 3, "ADC_Data "}, //Data_Register
-    {0x06, 0x0800l, 2, "GPIO_Conf"}, //IOCon_Register
-    {0x07, 0x0000l, 2, "ID_ST_Reg"}, //ID_st_reg
-    {0x10, 0x8001l, 2, "Ch_Map_0 "}, //CH_Map_1
-    {0x11, 0x8023l, 2, "Ch_Map_1 "}, //CH_Map_2
-    {0x12, 0x0000l, 2, "Ch_Map_2 "}, //CH_Map_3
-    {0x13, 0x0000l, 2, "Ch_Map_3 "}, //CH_Map_4
-    {0x20, 0x0000l, 2, "SetupCfg0"}, //Setup_Config_1
-    {0x21, 0x0000l, 2, "SetupCfg1"}, //Setup_Config_2
-    {0x22, 0x0000l, 2, "SetupCfg2"}, //Setup_Config_3
-    {0x23, 0x0000l, 2, "SetupCfg3"}, //Setup_Config_4
-    {0x28, 0x020Bl, 2, "FilterCf0"}, //Filter_Config_1
-    {0x29, 0x0200l, 2, "FilterCf1"}, //Filter_Config_2
-    {0x2a, 0x0200l, 2, "FilterCf2"}, //Filter_Config_3
-    {0x2b, 0x0200l, 2, "FilterCf3"}, //Filter_Config_4
-    {0x30, 0l,      3, "Offset_0 "}, //Offset_1
-    {0x31, 0l,      3, "Offset_1 "},  //Offset_2
-    {0x32, 0l,      3, "Offset_2 "}, //Offset_3
-    {0x33, 0l,      3, "Offset_3 "}, //Offset_4
-    {0x38, 0l,      3, "Gain_0   "}, //Gain_1
-    {0x39, 0l,      3, "Gain_1   "}, //Gain_2
-    {0x3a, 0l,      3, "Gain_2   "}, //Gain_3
-    {0x3b, 0l,      3, "Gain_3   "}, //Gain_4
-    {0xFF, 0l,      1, "Comm_Reg "} //Communications_Register
-};
-
-// SCPI Parser setup
-struct scpi_parser_context ctx;
-
-scpi_error_t identify(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_voltage(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t set_voltage(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t reset_voltage(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_rampdirection(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t set_rampdirection(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_rampspeed(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t set_rampspeed(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_ramplimits(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t set_ramplimits(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_adc_value(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_adc_regs(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_adc_reg(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t set_adc_reg(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t adc_init(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t set_pid_mode(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_mode(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t set_pid_kp(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_kp(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t set_pid_ki(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_ki(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t set_pid_kd(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_kd(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t set_pid_setpoint(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_setpoint(struct scpi_parser_context* context, struct scpi_token* command);
-
-scpi_error_t get_pid_p(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_i(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_d(struct scpi_parser_context* context, struct scpi_token* command);
-scpi_error_t get_pid_cv(struct scpi_parser_context* context, struct scpi_token* command);
-
 
 // Board setup
 // Pin for clock output
@@ -166,148 +70,17 @@ uint8_t speedIndex = 0;
 
 uint8_t adcdivcount = 0;
 
+struct scpi_parser_context ctx;
+
 void stepMe(void);
 
-void PIDstep(piddata_t* p, int32_t pv){
-  int32_t delta = p->setpoint - pv;
-  p->integrated += delta;
-  
-  // Calculate PID controller:
-  float P = p->kP * (float)delta;
-  float I = p->kI * (float)p->timestep * (float)p->integrated;
-  float D = p->kD / (float)p->timestep * (float)(delta - p->previousdelta);
-
-  p->cv += P + I + D;
-  p->previousdelta = delta;
-  
-  // limit contol output to maximum permissible limits
-  if (p->cv > p->limits[1]){
-    p->cv = p->limits[1];
-  }
-  if (p->cv < p->limits[0]){
-    p->cv = p->limits[0];
-  }
-}
-
-void initADC7176(){
-  Serial1.print("SETUP: ");
-  Serial1.println(AD7176_Setup(), HEX);
-  Serial1.println("REGS:");
-
-  // copy of AD7176 registers
-  enum AD7176_registers regNr;
-  for(regNr = ADC_Mode_Register; regNr < Offset_1; ++regNr) {
-    if (regNr == ADC_Mode_Register) continue;
-    if (regNr == Interface_Mode_Register) continue;
-    if (regNr == Register_Check) continue;
-    //if (regNr == Data_Register) continue;
-    Serial1.print("Write ");
-    Serial1.print(init_state[regNr].name);
-    Serial1.print(" ");
-    Serial1.print(regNr);
-    Serial1.print(" ");
-    Serial1.print(init_state[regNr].value, HEX);
-    Serial1.print(" ");
-    Serial1.print(AD7176_WriteRegister(init_state[regNr]));
-    Serial1.print(" bytes. Read ");
-    Serial1.print(AD7176_ReadRegister(&AD7176_regs[regNr]));
-    Serial1.print(" bytes: ");
-    Serial1.println(AD7176_regs[regNr].value, HEX);
-  }
-}
-
-
-
 void setup() {
+  pinsetup_due_levelconverter((uint8_t **)due_board);
   Serial1.begin(115200);
   SerialUSB.begin(0);
   Serial1.println("Starting up!");
-  
-  struct scpi_command *source, *measure, *pidcmd, *velcmd, *poscmd;
-  /* First, initialise the parser. */
-  scpi_init(&ctx);
-
-  /*
-   * Set up command tree.
-   *
-   *  *IDN?         -> identify
-   *  :SOURCE
-   *    :VOLTage    -> set_voltage
-   *    :VOLTage?   -> get_voltage
-   *    :REset      -> reset_voltage
-   *    :Ramp
-   *    :Ramp?
-   *    :RampSpeed
-   *    :RampSpeed?
-   *    :RampLimits
-   *    :RampLimits?
-   *  :MEASure
-   *    :VALue?   -> get__adc_value
-   *    :REGisters? -> get_adc_regs
-   *    :REGister?  -> get_adc_reg
-   *    :REGister   -> set_adc_reg
-   *    :INITialize -> adc_init
-   *  :PID
-   *    :KP         -> set_pid_kp
-   *    :KP?        -> get_pid_kp
-   *    :KI         -> set_pid_ki
-   *    :KI?        -> get_pid_ki
-   *    :KD         -> set_pid_kd
-   *    :KD?        -> get_pid_kd
-   *    :SetPoint?  -> get_pid_setpoint
-   *    :SetPoint   -> set_pid_setpoint
-   *    :ControlValue? -> get_pid_cv
-   */
-   
-  scpi_register_command(ctx.command_tree, SCPI_CL_SAMELEVEL, "*IDN?", 5, "*IDN?", 5, identify);
-  source = scpi_register_command(ctx.command_tree, SCPI_CL_CHILD, "SOURCE", 6, "SOUR", 4, NULL);
-
-  
-  scpi_register_command(source, SCPI_CL_CHILD, "RESET", 5, "RE", 2, reset_voltage);
-  scpi_register_command(source, SCPI_CL_CHILD, "VOLTAGE", 7, "VOLT", 4, set_voltage);
-  scpi_register_command(source, SCPI_CL_CHILD, "VOLTAGE?", 8, "VOLT?", 5, get_voltage);
-  
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMP?", 5, "R?", 2, get_rampdirection);
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMP", 4, "R", 1, set_rampdirection);
-  
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMPSPEED?", 10, "RS?", 3, get_rampspeed);
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMPSPEED", 9, "RS", 2, set_rampspeed);
-
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMPLIMITS?", 11, "RL?", 3, get_ramplimits);
-  scpi_register_command(source, SCPI_CL_CHILD, "RAMPLIMITS", 10, "RL", 2, set_ramplimits);
-
-  measure = scpi_register_command(ctx.command_tree, SCPI_CL_CHILD, "MEASURE", 7, "MEAS", 4, NULL);
-  scpi_register_command(measure, SCPI_CL_CHILD, "VALUE?", 6, "VAL?", 4, get_adc_value);
-  scpi_register_command(measure, SCPI_CL_CHILD, "REGISTERS?", 10, "REG?", 4, get_adc_regs);
-  scpi_register_command(measure, SCPI_CL_CHILD, "REGISTER", 8, "REG", 3, set_adc_reg);
-  scpi_register_command(measure, SCPI_CL_CHILD, "INITIALIZE", 10, "INIT", 4, adc_init);
-
-  pidcmd = scpi_register_command(ctx.command_tree, SCPI_CL_CHILD, "PID", 3, "PID", 3, NULL);
-  scpi_register_command(pidcmd, SCPI_CL_CHILD, "MODE?", 5, "M?", 2, get_pid_mode);
-  scpi_register_command(pidcmd, SCPI_CL_CHILD, "MODE", 4, "M", 1, set_pid_mode);
-  
-  velcmd = scpi_register_command(pidcmd, SCPI_CL_CHILD, "VELOCITY", 8, "VEL", 3, NULL);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KP", 2, "KP", 2, set_pid_kp);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KP?", 3, "KP?", 3, get_pid_kp);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KI", 2, "KI", 2, set_pid_ki);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KI?", 3, "KI?", 3, get_pid_ki);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KD", 2, "KD", 2, set_pid_kd);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "KD?", 3, "KD?", 3, get_pid_kd);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "SETPOINT", 8, "SP", 2, set_pid_setpoint);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "SETPOINT?", 9, "SP?", 3, get_pid_setpoint);
-  scpi_register_command(velcmd, SCPI_CL_CHILD, "CONTROLVALUE?", 13, "CV?", 3, get_pid_cv);
-  
-  poscmd = scpi_register_command(pidcmd, SCPI_CL_CHILD, "POSITION", 8, "POS", 3, NULL);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KP", 2, "KP", 2, set_pid_kp);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KP?", 3, "KP?", 3, get_pid_kp);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KI", 2, "KI", 2, set_pid_ki);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KI?", 3, "KI?", 3, get_pid_ki);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KD", 2, "KD", 2, set_pid_kd);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "KD?", 3, "KD?", 3, get_pid_kd);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "SETPOINT", 8, "SP", 2, set_pid_setpoint);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "SETPOINT?", 9, "SP?", 3, get_pid_setpoint);
-  scpi_register_command(poscmd, SCPI_CL_CHILD, "CONTROLVALUE?", 13, "CV?", 3, get_pid_cv);
-  
+ 
+  setup_scpi_command_tree(&ctx);
   delay(100);
   
   // set up clock output
@@ -349,7 +122,7 @@ void setup() {
   //Timer1.initialize(1000);
   DueTimer::getAvailable().attachInterrupt(stepMe).setPeriod(1000).start();
 }
- 
+
 void loop() {
   // setup for SCPI interpreter
   char line_buffer[256];
