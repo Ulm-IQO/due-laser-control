@@ -1,0 +1,13 @@
+
+# Eagle
+*.s#?
+*.l#?
+*.b#?
+*.epf
+
+# Arduino libraries
+firmware/due-ad_da-pid/libraries/ArduinoSCPIParser
+firmware/due-ad_da-pid/libraries/DueTimer
+
+# build directory
+firmware/due-ad_da-pid/build-arduino_due*
