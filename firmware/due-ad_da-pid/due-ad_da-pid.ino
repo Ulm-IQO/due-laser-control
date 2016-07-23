@@ -75,11 +75,18 @@ struct scpi_parser_context ctx;
 void stepMe(void);
 
 void setup() {
-  pinsetup_due_levelconverter((uint8_t **)due_board);
   Serial1.begin(115200);
-  SerialUSB.begin(0);
   Serial1.println("Starting up!");
- 
+  delay(100);
+  
+  SerialUSB.begin(0);
+  Serial1.println("SerialUSB setup done.");
+  delay(100);
+  
+  pinsetup_due_levelconverter(due_board);
+  Serial1.println("Pin setup done.");
+
+
   setup_scpi_command_tree(&ctx);
   delay(100);
   

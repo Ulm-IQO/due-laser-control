@@ -5,7 +5,7 @@
 
 extern uint8_t due_board[70][2];
 
-void pinsetup_due_levelconverter(uint8_t **boardstate);
+void pinsetup_due_levelconverter(uint8_t boardstate[][2]);
 
 #endif //_BOARDSETUP_H_
 

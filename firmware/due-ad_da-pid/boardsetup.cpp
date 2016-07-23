@@ -1,8 +1,8 @@
 #include "boardsetup.h"
 
-uint8_t due_board[70][2] = {
-    {0, INPUT},
-    {1, OUTPUT},
+uint8_t due_board[][2] = {
+//    {0, INPUT},
+//    {1, OUTPUT},
     {2, OUTPUT},
     {3, OUTPUT},
     {4, OUTPUT},
@@ -69,13 +69,18 @@ uint8_t due_board[70][2] = {
     {A11, OUTPUT},
     {DAC0, OUTPUT},
     {DAC1, OUTPUT},
-    {CANRX, INPUT},
-    {CANTX, OUTPUT}
+//    {CANRX, INPUT},
+//   {CANTX, OUTPUT}
 };
 
-void pinsetup_due_levelconverter(uint8_t **boardstate) {
-    for(int i=0; i<54; ++i){
-        pinMode(boardstate[i][0], boardstate[i][1]);
+void pinsetup_due_levelconverter(uint8_t boardstate[][2]) {
+    for(uint8_t i=0; i<66; ++i){
+        pinMode(boardstate[i][0], boardstate[i][0]);
+        //Serial.print("Pin ");
+        //Serial.print(boardstate[i][0]);
+        //Serial.print(" set to ");
+        //Serial.println(boardstate[i][1]);
+        //delay(100);
     }
     
 }
