@@ -11,13 +11,13 @@ st_reg init_state[] =
     {0x06, 0x0800l, 2, "GPIO_Conf"}, //IOCon_Register
     {0x07, 0x0000l, 2, "ID_ST_Reg"}, //ID_st_reg
     {0x10, 0x8001l, 2, "Ch_Map_0 "}, //CH_Map_1
-    {0x11, 0x8023l, 2, "Ch_Map_1 "}, //CH_Map_2
+    {0x11, 0x8043l, 2, "Ch_Map_1 "}, //CH_Map_2
     {0x12, 0x0000l, 2, "Ch_Map_2 "}, //CH_Map_3
     {0x13, 0x0000l, 2, "Ch_Map_3 "}, //CH_Map_4
-    {0x20, 0x0000l, 2, "SetupCfg0"}, //Setup_Config_1
-    {0x21, 0x0000l, 2, "SetupCfg1"}, //Setup_Config_2
-    {0x22, 0x0000l, 2, "SetupCfg2"}, //Setup_Config_3
-    {0x23, 0x0000l, 2, "SetupCfg3"}, //Setup_Config_4
+    {0x20, 0x0020l, 2, "SetupCfg0"}, //Setup_Config_1
+    {0x21, 0x0020l, 2, "SetupCfg1"}, //Setup_Config_2
+    {0x22, 0x0020l, 2, "SetupCfg2"}, //Setup_Config_3
+    {0x23, 0x0020l, 2, "SetupCfg3"}, //Setup_Config_4
     {0x28, 0x020Bl, 2, "FilterCf0"}, //Filter_Config_1
     {0x29, 0x0200l, 2, "FilterCf1"}, //Filter_Config_2
     {0x2a, 0x0200l, 2, "FilterCf2"}, //Filter_Config_3
