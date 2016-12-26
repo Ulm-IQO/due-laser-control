@@ -49,11 +49,12 @@
 /*! AD7176 register info */
 typedef struct _st_reg 
 {
-	uint8_t addr;
-	volatile int32_t value;
+    uint8_t addr;
     uint8_t size;
-    char name[10];
-}st_reg;
+    volatile uint16_t extra;
+    volatile int32_t value;
+    char name[12];
+} st_reg;
 
 /*! AD7176 registers list*/
 enum AD7176_registers
@@ -61,7 +62,7 @@ enum AD7176_registers
 	Status_Register = 0x00,
 	ADC_Mode_Register,
 	Interface_Mode_Register,
-    Register_Check,
+	Register_Check,
 	Data_Register,
 	IOCon_Register,
 	ID_st_reg,
@@ -96,34 +97,34 @@ AD7176_registers operator++(AD7176_registers &c, int);
 /*! Array holding the info for the AD7176 registers - address, initial value, size */
 st_reg AD7176_regs[] = 
 {
-    {0x00, 0x00l,   1, "Stat_Reg "}, //Status_Register
-    {0x01, 0x0000l, 2, "ADCModReg"}, //ADC_Mode_Register
-    {0x02, 0x0100l, 2, "IfModeReg"}, //Interface_Mode_Register
-    {0x03, 0x0000l, 3, "Reg_Check"}, //Register_Check
-    {0x04, 0x0000l, 3, "ADC_Data "}, //Data_Register
-    {0x06, 0x0000l, 2, "GPIO_Conf"}, //IOCon_Register
-    {0x07, 0x0000l, 2, "ID_ST_Reg"}, //ID_st_reg
-    {0x10, 0x8002l, 2, "Ch_Map_0 "}, //CH_Map_1
-	{0x11, 0x0000l, 2, "Ch_Map_1 "}, //CH_Map_2
-	{0x12, 0x0000l, 2, "Ch_Map_2 "}, //CH_Map_3
-	{0x13, 0x0000l, 2, "Ch_Map_3 "}, //CH_Map_4
-	{0x20, 0x0000l, 2, "SetupCfg0"}, //Setup_Config_1
-	{0x21, 0x0000l, 2, "SetupCfg1"}, //Setup_Config_2
-	{0x22, 0x0000l, 2, "SetupCfg2"}, //Setup_Config_3
-	{0x23, 0x0000l, 2, "SetupCfg3"}, //Setup_Config_4
-	{0x28, 0x020Al, 2, "FilterCf0"}, //Filter_Config_1
-	{0x29, 0x0200l, 2, "FilterCf1"}, //Filter_Config_2
-	{0x2a, 0x0200l, 2, "FilterCf2"}, //Filter_Config_3
-	{0x2b, 0x0200l, 2, "FilterCf3"}, //Filter_Config_4
-	{0x30, 0l,      3, "Offset_0 "}, //Offset_1
-	{0x31, 0l,      3, "Offset_1 "},  //Offset_2
-	{0x32, 0l,      3, "Offset_2 "}, //Offset_3
-	{0x33, 0l,      3, "Offset_3 "}, //Offset_4
-	{0x38, 0l,      3, "Gain_0   "}, //Gain_1
-	{0x39, 0l,      3, "Gain_1   "}, //Gain_2
-	{0x3a, 0l,      3, "Gain_2   "}, //Gain_3
-	{0x3b, 0l,      3, "Gain_3   "}, //Gain_4
-	{0xFF, 0l,      1, "Comm_Reg "} //Communications_Register
+    {0x00, 1, 0, 0x0000l, "Status_Reg "}, //Status_Register
+    {0x01, 2, 0, 0x0000l, "ADCModeReg "}, //ADC_Mode_Register
+    {0x02, 2, 0, 0x0100l, "IfModeReg  "}, //Interface_Mode_Register
+    {0x03, 3, 0, 0x0000l, "Reg_Check  "}, //Register_Check
+    {0x04, 3, 0, 0x0000l, "ADC_Data   "}, //Data_Register
+    {0x06, 2, 0, 0x0000l, "GPIO_Conf  "}, //IOCon_Register
+    {0x07, 2, 0, 0x0000l, "ID_ST_Reg  "}, //ID_st_reg
+    {0x10, 2, 0, 0x8002l, "Chan_Map_0 "}, //CH_Map_1
+    {0x11, 2, 0, 0x0000l, "Chan_Map_1 "}, //CH_Map_2
+    {0x12, 2, 0, 0x0000l, "Chan_Map_2 "}, //CH_Map_3
+    {0x13, 2, 0, 0x0000l, "Chan_Map_3 "}, //CH_Map_4
+    {0x20, 2, 0, 0x0000l, "SetupCfg0  "}, //Setup_Config_1
+    {0x21, 2, 0, 0x0000l, "SetupCfg1  "}, //Setup_Config_2
+    {0x22, 2, 0, 0x0000l, "SetupCfg2  "}, //Setup_Config_3
+    {0x23, 2, 0, 0x0000l, "SetupCfg3  "}, //Setup_Config_4
+    {0x28, 2, 0, 0x020Al, "FilterCfg0 "}, //Filter_Config_1
+    {0x29, 2, 0, 0x0200l, "FilterCfg1 "}, //Filter_Config_2
+    {0x2a, 2, 0, 0x0200l, "FilterCfg2 "}, //Filter_Config_3
+    {0x2b, 2, 0, 0x0200l, "FilterCfg3 "}, //Filter_Config_4
+    {0x30, 3, 0, 0l,      "Offset_0   "}, //Offset_1
+    {0x31, 3, 0, 0l,      "Offset_1   "}, //Offset_2
+    {0x32, 3, 0, 0l,      "Offset_2   "}, //Offset_3
+    {0x33, 3, 0, 0l,      "Offset_3   "}, //Offset_4
+    {0x38, 3, 0, 0l,      "Gain_0     "}, //Gain_1
+    {0x39, 3, 0, 0l,      "Gain_1     "}, //Gain_2
+    {0x3a, 3, 0, 0l,      "Gain_2     "}, //Gain_3
+    {0x3b, 3, 0, 0l,      "Gain_3     "}, //Gain_4
+    {0xFF, 1, 0, 0l,      "Comm_Reg   "}  //Communications_Register
 };
 #else
 extern st_reg AD7176_regs[AD7176_REG_NO];
@@ -148,7 +149,7 @@ extern st_reg AD7176_regs[AD7176_REG_NO];
 #define ADC_MODE_SING_CYC           (1 << 13)
 #define ADC_MODE_REG_DELAY(x)       (((x) & 0x7) << 8)
 #define ADC_MODE_REG_MODE(x)        (((x) & 0x7) << 4)
-#define ADC_MODE_REG_CLKSEL(x))     (((x) & 0x3) << 2)
+#define ADC_MODE_REG_CLKSEL(x)      (((x) & 0x3) << 2)
 
 /* Interface Mode Register bits */
 #define INTF_MODE_REG_ALT_SYNC      (1 << 12)
