@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.6.0">
+<eagle version="7.7.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -68,6 +68,16 @@
 <hole x="45.72" y="20.955" drill="3.2"/>
 <hole x="37.465" y="52.07" drill="3.2"/>
 <hole x="45.72" y="34.925" drill="3.2"/>
+<text x="29.21" y="63.5" size="1.778" layer="51">SC</text>
+<text x="43.18" y="63.5" size="1.778" layer="51">AI+</text>
+<text x="57.15" y="40.64" size="1.778" layer="51">AI-</text>
+<text x="57.15" y="26.67" size="1.778" layer="51">RS+</text>
+<text x="57.15" y="12.7" size="1.778" layer="51">RS-</text>
+<text x="41.91" y="-8.89" size="1.778" layer="51">EX+</text>
+<text x="27.94" y="-8.89" size="1.778" layer="51">EX-</text>
+<text x="13.97" y="-8.89" size="1.778" layer="51">SC</text>
+<text x="26.67" y="12.7" size="1.778" layer="51">T+</text>
+<text x="26.67" y="10.16" size="1.778" layer="51">T-</text>
 </plain>
 <libraries>
 <library name="stuff">
@@ -263,6 +273,9 @@ design rules under a new name.</description>
 <autorouter>
 <pass name="Default">
 <param name="RoutingGrid" value="50mil"/>
+<param name="AutoGrid" value="1"/>
+<param name="Efforts" value="0"/>
+<param name="TopRouterVariant" value="1"/>
 <param name="tpViaShape" value="round"/>
 <param name="PrefDir.1" value="|"/>
 <param name="PrefDir.2" value="0"/>
