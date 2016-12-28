@@ -79,8 +79,8 @@ uint8_t AD7176_ComputeCRC8(uint8_t* pBuf, uint8_t bufSize);
 /*! Computes the XOR checksum for a data buffer. */
 uint8_t AD7176_ComputeXOR8(uint8_t * pBuf, uint8_t bufSize);
 
-/*! Updates the CRC settings. */
-void AD7176_UpdateCRCSetting(void);
+/*! Updates CRC and DataStatus settings. */
+void AD7176_UpdateSettings(void);
 
 /*! Initializes the AD7176. */
 int32_t AD7176_Setup(void);

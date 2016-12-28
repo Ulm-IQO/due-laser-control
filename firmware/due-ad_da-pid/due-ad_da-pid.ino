@@ -28,7 +28,8 @@ piddata_t pospid = {0, 0, 0, 2000000, 1000, {-520000, 520000}, 0.01, 0.00001, 0 
 
 // Board setup
 // Pin for clock output
-const int timebasePin = 13;
+const int timebasePin = 12;
+const int rampPin = 13;
 
 uint8_t onBoardGain = 2;
 float vRef1 = 5.0;
@@ -49,10 +50,14 @@ volatile uint16_t rampDiv = 1;
 volatile int32_t rampStart = -524287;
 // voltage ramp upper limit
 volatile int32_t rampStop = 524287;
+// count steps, lots of steps
+volatile uint32_t rampStepCount = 0;
 // last read data from AD7176 ADC
 volatile int32_t adcData[4] = {0, 0, 0, 0};
+// last read status from AD7176 ADC
+volatile uint8_t adcStatus[4] = {0, 0, 0, 0};
 // output clock divider (multiples of timer interrupt)
-volatile uint8_t timebaseDiv = 1;
+volatile uint8_t timebaseDiv = 10;
 // output clock counter
 volatile uint8_t timebaseCtr = 0;
 // output clock enable
@@ -69,6 +74,7 @@ int32_t speedTotal = 0;
 uint8_t speedIndex = 0;
 
 uint8_t adcdivcount = 0;
+uint8_t dacdivcount = 0;
 
 struct scpi_parser_context ctx;
 
@@ -127,7 +133,7 @@ void setup() {
 
   // set up timed control loop (1 ms)
   //Timer1.initialize(1000);
-  DueTimer::getAvailable().attachInterrupt(stepMe).setPeriod(1000).start();
+  DueTimer::getAvailable().attachInterrupt(stepMe).setPeriod(100).start();
 }
 
 void loop() {
@@ -149,41 +155,48 @@ void stepMe(void){
       timebaseval = !timebaseval;
       digitalWrite(timebasePin, timebaseval);
     }
-    if (rampDir != 0) {
-      
-      currentValue += (long)rampMult * rampDir;
-      
-      AD57XX_LDAC_LOW();
-      AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
-      AD57XX_LDAC_HIGH();
-
-      if(currentValue + rampMult >= rampStop) rampDir = -1;
-      if(currentValue - rampMult <= rampStart) rampDir = 1;
-      
-    } else if (pidStatus == 2) {
-      currentValue += rampSpeed;
-      
-      AD57XX_LDAC_LOW();
-      AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
-      AD57XX_LDAC_HIGH();
-      
-      if(currentValue > rampStop){
-        currentValue = rampStop;
-        velpid.setpoint = -abs(velpid.setpoint);
+    
+    dacdivcount = (dacdivcount + 1) % 10;
+    if (dacdivcount == 0){
+      if (rampDir != 0) {
+        
+        currentValue += (long)rampMult * rampDir;
+        rampStepCount++;
+        
+        AD57XX_LDAC_LOW();
+        AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
+        AD57XX_LDAC_HIGH();
+  
+        if(currentValue + rampMult >= rampStop) rampDir = -1;
+        if(currentValue - rampMult <= rampStart) rampDir = 1;
+        
+      } else if (pidStatus == 2) {
+        currentValue += rampSpeed;
+        rampStepCount++;
+        
+        AD57XX_LDAC_LOW();
+        AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
+        AD57XX_LDAC_HIGH();
+        
+        if(currentValue > rampStop){
+          currentValue = rampStop;
+          velpid.setpoint = -abs(velpid.setpoint);
+        }
+        if(currentValue < rampStart){
+          currentValue = rampStart;
+          velpid.setpoint = abs(velpid.setpoint);
+        }
+      } else {
+        rampStepCount = 0;
+        
+        AD57XX_LDAC_LOW();
+        AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
+        AD57XX_LDAC_HIGH();
       }
-      if(currentValue < rampStart){
-        currentValue = rampStart;
-        velpid.setpoint = abs(velpid.setpoint);
-      }
-    } else {
-      AD57XX_LDAC_LOW();
-      AD57XX_SetRegisterValue(AD57XX_REG_DAC, currentValue);
-      AD57XX_LDAC_HIGH();
+      readValue = (long)AD57XX_GetRegisterValue(AD57XX_REG_DAC) - 1048576;
     }
-
-    readValue = (long)AD57XX_GetRegisterValue(AD57XX_REG_DAC) - 1048576;
-
-    adcdivcount = (adcdivcount + 1) % 10;
+    
+    adcdivcount = (adcdivcount + 1) % 100;
     if (adcdivcount == 0){
       // position mode
       if(pidStatus == 1){
@@ -203,48 +216,37 @@ void stepMe(void){
         rampSpeed = velpid.cv;
       }
       
-      SerialUSB.println(adcData[0]);
-    
-    } else if (adcdivcount == 1) {
+    } else if (adcdivcount == 0) {
       digitalWrite(AD7176_SYNC_PIN, LOW);
-    } else if (adcdivcount == 2) {
+    } else if (adcdivcount == 1) {
       digitalWrite(AD7176_SYNC_PIN, HIGH);
-    } else if (adcdivcount == 4) {
+    }
+    if (adcdivcount % 5 == 4){
       /* Read the value of the Status Register */
-      int32_t ret = AD7176_ReadRegister(&AD7176_regs[Status_Register]);
+      int32_t data = 0;
+      int32_t ret = AD7176_ReadData(&data);
+      
+      uint16_t extra = AD7176_regs[Data_Register].extra;
       if(ret >= 0) {
-        /* Check the RDY bit in the Status Register */
-        if ((AD7176_regs[Status_Register].value & STATUS_REG_RDY) == 0
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_ADC_ERR)
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_CRC_ERR)
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_REG_ERR)
+        uint8_t channel = STATUS_REG_CH(extra);
+        adcStatus[channel] = extra;
+        
+        /* Check the RDY bit in the Status Register (extra & STATUS_REG_RDY) == 0 */
+        if (
+          !(extra & STATUS_REG_ADC_ERR)
+          && !(extra & STATUS_REG_CRC_ERR)
+          && !(extra & STATUS_REG_REG_ERR)
           ){
-          uint8_t channel = AD7176_regs[Status_Register].value & 0x03;
-          int32_t data = 0;
-          AD7176_ReadData(&data);
-          if(data != 0){
-            adcData[channel] = data;
-          }
+          adcData[channel] = data;
         }
       }
-    } else if (adcdivcount == 6) {
-      /* Read the value of the Status Register */
-      int32_t ret = AD7176_ReadRegister(&AD7176_regs[Status_Register]);
-      if(ret >= 0) {
-        /* Check the RDY bit in the Status Register */
-        if ((AD7176_regs[Status_Register].value & STATUS_REG_RDY) == 0
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_ADC_ERR)
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_CRC_ERR)
-          && !(AD7176_regs[Status_Register].value & STATUS_REG_REG_ERR)
-          ){
-          uint8_t channel = AD7176_regs[Status_Register].value & 0x03;
-          int32_t data = 0;
-          AD7176_ReadData(&data);
-          if(data != 0){
-            adcData[channel] = data;
-          }
-        }
-      }
+    }
+    if (adcdivcount % 10 == 0){
+      SerialUSB.print(rampStepCount);
+      SerialUSB.print(" ");
+      SerialUSB.print(adcData[1]);
+      SerialUSB.print(" ");
+      SerialUSB.println(adcStatus[1]);
     }
 }
 
@@ -402,7 +404,14 @@ scpi_error_t get_adc_value(struct scpi_parser_context* context, struct scpi_toke
   Serial1.print(adcData[2]);
   Serial1.print(' ');
   Serial1.println(adcData[3]);
-
+  Serial1.print(adcStatus[0], HEX);
+  Serial1.print(' ');
+  Serial1.print(adcStatus[1], HEX);
+  Serial1.print(' ');
+  Serial1.print(adcStatus[2], HEX);
+  Serial1.print(' ');
+  Serial1.println(adcStatus[3], HEX);
+  
   scpi_free_tokens(command);
   return SCPI_SUCCESS;
 }

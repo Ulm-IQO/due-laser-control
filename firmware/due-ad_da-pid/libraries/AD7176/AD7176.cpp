@@ -62,6 +62,7 @@ enum CRC_MODE
 struct AD7176_state
 {
     enum CRC_MODE useCRC;
+    uint8_t dataStatus;
 } AD7176_st;
 
 
@@ -91,16 +92,23 @@ int32_t AD7176_ReadRegister(st_reg* pReg)
     uint8_t buffer[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t i         = 0;
     uint8_t check8    = 0;
-	uint8_t msgBuf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t msgBuf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t read_len = 0;
 
     /* Build the Command word */
     buffer[0] = COMM_REG_WEN | COMM_REG_RD | pReg->addr;
-    
+   
+    read_len = pReg->size + 1;
+    if (AD7176_st.useCRC != disable)
+        read_len += 1;
+    /* When Status Register is appended to Data,
+       we read one more byte from Data register to get the status */
+    if (AD7176_st.dataStatus == 1 && pReg->addr == 0x04)
+        read_len += 1;
+
     /* Read data from the device */
-    ret = AD7176_Read(
-                AD7176_SLAVE_ID, 
-                buffer, 
-                ((AD7176_st.useCRC != disable) ? pReg->size + 1 : pReg->size) + 1);
+    ret = AD7176_Read(AD7176_SLAVE_ID, buffer, read_len);
+
     if(ret < 0)
         return ret;
 
@@ -108,30 +116,32 @@ int32_t AD7176_ReadRegister(st_reg* pReg)
     if(AD7176_st.useCRC == use_CRC)
     {
     	msgBuf[0] = COMM_REG_WEN | COMM_REG_RD | pReg->addr;
-    	for(i = 1; i < pReg->size + 2; ++i)
+    	for(i = 1; i < read_len; ++i)
     	{
     		msgBuf[i] = buffer[i];
     	}
-    	check8 = AD7176_ComputeCRC8(msgBuf, pReg->size + 2);
+    	check8 = AD7176_ComputeCRC8(msgBuf, read_len);
     }
     if(AD7176_st.useCRC == use_XOR)
     {
         msgBuf[0] = COMM_REG_WEN | COMM_REG_RD | pReg->addr;
-        for(i = 1; i < pReg->size + 2; ++i)
+        for(i = 1; i < read_len; ++i)
         {
             msgBuf[i] = buffer[i];
         }
-        check8 = AD7176_ComputeXOR8(msgBuf, pReg->size + 2);
+        check8 = AD7176_ComputeXOR8(msgBuf, read_len);
+    }	
+    if(check8 != 0)
+    {
+        /* ReadRegister checksum failed. */
+        return -1;
     }
-	
-	if(check8 != 0)
-	{
-		/* ReadRegister checksum failed. */
-		return -1;
-	}
-	
+
+    if (AD7176_st.dataStatus == 1 && pReg->addr == 0x04)
+        pReg->extra = buffer[pReg->size + 1];
+
     /* Build the result */
-    pReg->value = 0;
+    pReg->value = 0l;
     for(i = 1; i < pReg->size + 1; i++)
     {
         pReg->value <<= 8;
@@ -302,21 +312,21 @@ uint8_t AD7176_ComputeXOR8(uint8_t * pBuf, uint8_t bufSize)
 *
 * @return None.
 *******************************************************************************/
-void AD7176_UpdateCRCSetting(void)
+void AD7176_UpdateSettings(void)
 {
-	/* Get CRC State. */
+    /* Get CRC State. */
     if(INTF_MODE_REG_CRC_STAT(AD7176_regs[Interface_Mode_Register].value))
-    {
     	AD7176_st.useCRC = use_CRC;
-    }
     else if(INTF_MODE_REG_XOR_STAT(AD7176_regs[Interface_Mode_Register].value))
-    {
     	AD7176_st.useCRC = use_XOR;
-    }
     else
-    {
     	AD7176_st.useCRC = disable;
-    }
+    
+    /* See if DataStaus is on. */
+    if(AD7176_regs[Interface_Mode_Register].value & INTF_MODE_REG_DATA_STAT)
+        AD7176_st.dataStatus = 1;
+    else
+        AD7176_st.dataStatus = 0;
 }
 
 /***************************************************************************//**
@@ -345,8 +355,8 @@ int32_t AD7176_Setup(void)
     if(ret < 0)
         return ret;
 	
-	/* Get CRC State */
-	AD7176_UpdateCRCSetting();
+    /* Get CRC and DataStatus State */
+    AD7176_UpdateSettings();
     
     /* Initialize registers Data_Register through Filter_Config_4. */
     for(regNr = Data_Register; (regNr < Offset_1) && !(ret < 0); ++regNr)
