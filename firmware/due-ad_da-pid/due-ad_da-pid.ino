@@ -73,15 +73,20 @@ int32_t speedarr[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int32_t speedTotal = 0;
 uint8_t speedIndex = 0;
 
-uint8_t adcdivcount = 0;
+volatile uint8_t adcdivcount = 0;
 uint8_t dacdivcount = 0;
+
+# define READ_BUF_LEN 80
+char line_buffer[READ_BUF_LEN];
+unsigned char read_length;
+int offset = 0;
 
 struct scpi_parser_context ctx;
 
 void stepMe(void);
 
 void setup() {
-  Serial1.begin(115200);
+  Serial1.begin(9600);
   Serial1.println("Starting up!");
   delay(100);
   
@@ -134,19 +139,42 @@ void setup() {
   // set up timed control loop (1 ms)
   //Timer1.initialize(1000);
   DueTimer::getAvailable().attachInterrupt(stepMe).setPeriod(100).start();
+  offset = 0;
 }
 
 void loop() {
-  // setup for SCPI interpreter
-  char line_buffer[256];
-  memset(line_buffer, 0, sizeof(line_buffer));
-  unsigned char read_length;
-  
-  // Read in a line and execute it.
-  read_length = Serial1.readBytesUntil('\n', line_buffer, 256);
-  if(read_length > 0) {
-    scpi_execute_command(&ctx, line_buffer, read_length);
+  int avail = Serial1.available();
+  if (offset + avail < READ_BUF_LEN) {
+    read_length = Serial1.readBytesUntil('\n', &line_buffer[offset], avail);
+    if (read_length < avail) {
+      line_buffer[offset + read_length] = '\n';
+      }
+  } else {
+    read_length = Serial1.readBytesUntil('\n', &line_buffer[offset], READ_BUF_LEN - offset);
   }
+  
+  if(line_buffer[offset + read_length] == '\n') {
+    offset += read_length;
+    scpi_error_t result = scpi_execute_command(&ctx, line_buffer, offset);
+    if (result != SCPI_SUCCESS) {
+      line_buffer[offset + 1] = 0;
+      Serial1.print("CMD? ");
+      Serial1.println(line_buffer);
+      }
+    memset(line_buffer, 0, sizeof(line_buffer));
+    offset = 0;
+  } else {
+    if (offset + read_length == READ_BUF_LEN){
+      Serial1.println("ERR");
+      memset(line_buffer, 0, sizeof(line_buffer));
+      offset = 0;
+    } else {
+      offset += read_length;
+    }
+  }
+/*  
+
+*/
 }
 
 void stepMe(void){
@@ -241,7 +269,7 @@ void stepMe(void){
         }
       }
     }
-    if (adcdivcount % 10 == 0){
+    if (adcdivcount % 10 == 0) { 
       SerialUSB.print(rampStepCount);
       SerialUSB.print(" ");
       SerialUSB.print(adcData[1]);
