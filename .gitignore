@@ -6,7 +6,6 @@
 *.epf
 
 # Arduino libraries
-firmware/due-ad_da-pid/libraries/ArduinoSCPIParser
 firmware/due-ad_da-pid/libraries/DueTimer
 
 # build directory
