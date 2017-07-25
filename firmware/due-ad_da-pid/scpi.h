@@ -50,6 +50,9 @@ scpi_error_t get_pid_i(struct scpi_parser_context* context, struct scpi_token* c
 scpi_error_t get_pid_d(struct scpi_parser_context* context, struct scpi_token* command);
 scpi_error_t get_pid_cv(struct scpi_parser_context* context, struct scpi_token* command);
 
+scpi_error_t get_print(struct scpi_parser_context* context, struct scpi_token* command);
+scpi_error_t set_print(struct scpi_parser_context* context, struct scpi_token* command);
+
 void setup_scpi_command_tree(struct scpi_parser_context *ctx);
 
 #endif //_SCPI_H_

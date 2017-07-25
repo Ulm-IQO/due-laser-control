@@ -86,4 +86,7 @@ void setup_scpi_command_tree(struct scpi_parser_context *ctx) {
   scpi_register_command(poscmd, SCPI_CL_CHILD, "SETPOINT", 8, "SP", 2, set_pid_setpoint);
   scpi_register_command(poscmd, SCPI_CL_CHILD, "SETPOINT?", 9, "SP?", 3, get_pid_setpoint);
   scpi_register_command(poscmd, SCPI_CL_CHILD, "CONTROLVALUE?", 13, "CV?", 3, get_pid_cv);
+
+  scpi_register_command(ctx->command_tree, SCPI_CL_CHILD, "PRINT", 5, "P", 1, set_print);
+  scpi_register_command(ctx->command_tree, SCPI_CL_CHILD, "PRINT?", 6, "P?", 2, get_print);
 }
