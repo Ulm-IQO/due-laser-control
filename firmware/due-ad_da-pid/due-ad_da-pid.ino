@@ -293,6 +293,16 @@ scpi_error_t identify(struct scpi_parser_context* context, struct scpi_token* co
   return SCPI_SUCCESS;
 }
 
+/*
+   Respond to *RST
+*/
+scpi_error_t reset(struct scpi_parser_context* context, struct scpi_token* command) {
+  Serial1.println("Not implemented.");
+
+  scpi_free_tokens(command);
+  return SCPI_SUCCESS;
+}
+
 scpi_error_t get_rampdirection(struct scpi_parser_context* context, struct scpi_token* command) {
   Serial1.println(rampDir);
 
@@ -571,10 +581,8 @@ scpi_error_t get_pid_kp(struct scpi_parser_context* context, struct scpi_token* 
     args = args->next;
   }
   if (whichpid == 2) {
-    Serial1.print("PID:VEL:KP ");
     Serial1.println(velpid.kP);
   } else {
-    Serial1.print("PID:POS:KP ");
     Serial1.println(pospid.kP);
   }
   scpi_free_tokens(command);
@@ -597,10 +605,8 @@ scpi_error_t set_pid_ki(struct scpi_parser_context* context, struct scpi_token* 
 
   if (whichpid == 2) {
     velpid.kI = ivalue;
-    Serial1.print("PID:VEL:KI ");
   } else {
     pospid.kI = ivalue;
-    Serial1.print("PID:POS:KI ");
   }
   Serial1.println(ivalue);
 
@@ -621,10 +627,8 @@ scpi_error_t get_pid_ki(struct scpi_parser_context* context, struct scpi_token* 
     args = args->next;
   }
   if (whichpid == 2) {
-    Serial1.print("PID:VEL:KI ");
     Serial1.println(velpid.kI);
   } else {
-    Serial1.print("PID:POS:KI ");
     Serial1.println(pospid.kI);
   }
   scpi_free_tokens(command);
@@ -647,10 +651,8 @@ scpi_error_t set_pid_kd(struct scpi_parser_context* context, struct scpi_token* 
 
   if (whichpid == 2) {
     velpid.kD = dvalue;
-    Serial1.print("PID:VEL:KD ");
   } else {
     pospid.kD = dvalue;
-    Serial1.print("PID:POS:KD ");
   }
   Serial1.println(dvalue);
 
@@ -671,10 +673,8 @@ scpi_error_t get_pid_kd(struct scpi_parser_context* context, struct scpi_token* 
     args = args->next;
   }
   if (whichpid == 2) {
-    Serial1.print("PID:VEL:KD ");
     Serial1.println(velpid.kD);
   } else {
-    Serial1.print("PID:POS:KD ");
     Serial1.println(pospid.kD);
   }
   scpi_free_tokens(command);
@@ -697,10 +697,8 @@ scpi_error_t set_pid_setpoint(struct scpi_parser_context* context, struct scpi_t
 
   if (whichpid == 2) {
     velpid.setpoint = svalue;
-    Serial1.print("PID:VEL:SP ");
   } else {
     pospid.setpoint = svalue;
-    Serial1.print("PID:POS:SP ");
   }
   Serial1.println(svalue);
 
@@ -721,10 +719,8 @@ scpi_error_t get_pid_setpoint(struct scpi_parser_context* context, struct scpi_t
     args = args->next;
   }
   if (whichpid == 2) {
-    Serial1.print("PID:VEL:SP ");
     Serial1.println(velpid.setpoint);
   } else {
-    Serial1.print("PID:POS:SP ");
     Serial1.println(pospid.setpoint);
   }
   scpi_free_tokens(command);
@@ -743,10 +739,8 @@ scpi_error_t get_pid_cv(struct scpi_parser_context* context, struct scpi_token* 
     args = args->next;
   }
   if (whichpid == 2) {
-    Serial1.print("PID:VEL:CV ");
     Serial1.println(velpid.cv);
   } else {
-    Serial1.print("PID:POS:CV ");
     Serial1.println(pospid.cv);
   }
   scpi_free_tokens(command);

@@ -40,6 +40,7 @@ void setup_scpi_command_tree(struct scpi_parser_context *ctx) {
   scpi_init(ctx);
   
   scpi_register_command(ctx->command_tree, SCPI_CL_SAMELEVEL, "*IDN?", 5, "*IDN?", 5, identify);
+  scpi_register_command(ctx->command_tree, SCPI_CL_SAMELEVEL, "*RST", 4, "*RST", 4, reset);
   source = scpi_register_command(ctx->command_tree, SCPI_CL_CHILD, "SOURCE", 6, "SOUR", 4, NULL);
 
   scpi_register_command(source, SCPI_CL_CHILD, "RESET", 5, "RE", 2, reset_voltage);

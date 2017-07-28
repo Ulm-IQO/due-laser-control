@@ -10,6 +10,7 @@
 //struct scpi_parser_context ctx;
 
 scpi_error_t identify(struct scpi_parser_context* context, struct scpi_token* command);
+scpi_error_t reset(struct scpi_parser_context* context, struct scpi_token* command);
 
 scpi_error_t get_voltage(struct scpi_parser_context* context, struct scpi_token* command);
 scpi_error_t set_voltage(struct scpi_parser_context* context, struct scpi_token* command);
